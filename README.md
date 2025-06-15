@@ -25,6 +25,7 @@ The core of this application is the **`llm_news_auditor`**, a top‑level agent 
    * Corrects inaccuracies, clarifies disputes, and enriches with new details.
    * Preserves the author’s tone, style, and structure with minimal edits.
 ---
+```bash
 Folder Structure
 
 context-ai/
@@ -56,7 +57,7 @@ context-ai/
 ├── pyproject.toml              # Project metadata and dependencies
 ├── requirements.txt            # Project dependencies
 └── README.md                   # This file
-
+```
 ---
 
 ## Key Features
