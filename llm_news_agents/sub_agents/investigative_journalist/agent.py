@@ -4,20 +4,18 @@ import sys
 import logging
 import google.cloud.logging
 import requests
-
-from datetime import datetime
-from typing import List, Dict, Optional
+import asyncio
+import httpx
 
 from google.adk import Agent
 from google.adk.agents.callback_context import CallbackContext
 from google.adk.models.llm_response import LlmResponse
 from google.genai import types
 from callback_logging import log_query_to_model, log_model_response
-
 from newsdataapi import NewsDataApiClient
-
+from datetime import datetime, timedelta
+from typing import Dict, Any, Optional, List
 from . import prompt
-
 
 logging.basicConfig(stream=sys.stdout, level=logging.INFO)
 logging.getLogger().addHandler(logging.StreamHandler(stream=sys.stdout))
@@ -91,13 +89,6 @@ async def _render_reference(
             del llm_response.content.parts[1:]
         
     return llm_response
-
-
-import asyncio
-import os
-import httpx
-from datetime import datetime, timedelta
-from typing import Dict, Any, Optional, List
 
 async def fetch_top_newsdataio_api(query: str, from_date: Optional[str] = None, to_date: Optional[str] = None) -> List[Dict[str, Any]]:
     """
@@ -203,9 +194,6 @@ async def fetch_top_newsdataio_api(query: str, from_date: Optional[str] = None, 
         print(f"An unexpected error occurred: {e}")
         return []
     
-
-from typing import Optional, List, Dict, Any
-
 async def search_news(query: str, from_date: Optional[str] = None, to_date: Optional[str] = None) -> List[Dict[str, Any]]:
     """
     Search for news articles matching a query using NewsAPI's 'everything' endpoint.
@@ -316,31 +304,10 @@ async def fact_checker(
         return None
 
 investigative_journalist_agent = Agent(
-    model='gemini-2.0-flash',
+    model='gemini-1.5.0-flash',
     name='investigative_journalist',
     before_model_callback=log_query_to_model,
     after_model_callback=_render_reference,
     instruction=prompt.investigative_journalist_PROMPT,
-    # """
-    # PROMPT:
-    # {{ PROMPT? }}
-    
-    # PLOT_OUTLINE:
-    # {{ PLOT_OUTLINE? }}
-
-    # CRITICAL_FEEDBACK:
-    # {{ CRITICAL_FEEDBACK? }}
-
-    # INSTRUCTIONS:
-    # - If there is a CRITICAL_FEEDBACK, use your tools to do research to solve those suggestions
-    # - If there is a PLOT_OUTLINE, use your tools to do research to add more historical detail
-    # - If these are empty, use your tools to gather facts about the person in the PROMPT
-    # - Use the 'append_to_state' tool to add your research to the field 'research'.
-    # - Summarise what you have learned.
-    # Now, use your tools to do research.
-    # """,
-
-    # Gave the journalist the tools its prompt tells it to use.
-    #  tools=[fetch_top_newsdataio_api,search_news, fact_checker],
-    tools=[fetch_top_newsdataio_api, fact_checker],
+    tools=[fetch_top_newsdataio_api,search_news, fact_checker],
 )
