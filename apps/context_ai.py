@@ -9,6 +9,7 @@ import io
 import wave
 import audioop
 
+from typing import Dict, Any
 from audio_recorder_streamlit import audio_recorder
 from google.cloud import texttospeech
 from google.cloud import speech
@@ -39,7 +40,7 @@ st.markdown(
     /* ────── Chat‐Bubble Overrides ────── */
     div[data-testid="stChatMessage"] [aria-label="User"]
     div[data-testid="stMarkdownContainer"] {
-        background-color: #0D99FF !important;
+        background-color: #00007C !important;
         color: white !important;
         border-radius: 1rem !important;
         padding: 0.5rem !important;
@@ -65,7 +66,7 @@ st.markdown(
         padding-bottom: 0.5rem !important;
     }
     div[data-testid="stChatInput"] div[role="textbox"]::placeholder {
-        color: #999999 !important;
+        color: #9BFFFF !important;
     }
     </style>
     """,
@@ -75,7 +76,7 @@ st.markdown(
 # ─── 2) CONSTANTS & SESSION‐STATE SETUP ─────────────────────────────────────────
 
 API_BASE_URL = "http://localhost:8000"
-APP_NAME = "llm_news_agents"  # <<<< Make sure this matches your root agent's module name
+APP_NAME = "llm_news_agents"  
 
 if "user_id" not in st.session_state:
     st.session_state.user_id = f"user-{uuid.uuid4()}"
@@ -155,9 +156,6 @@ def send_message(message: str):
     if not st.session_state.session_id:
         st.error("No active session. Please create a session first.")
         return False
-
-    st.session_state.messages.append({"role": "user", "content": message, "author": "user", "type": "text"})
-
     try:
         response = requests.post(
             f"{API_BASE_URL}/run",
@@ -337,25 +335,55 @@ def send_message(message: str):
 
     return True
 
-def display_audio_if_present(message_data):
+def display_audio_if_present(message_data: Dict[str, Any]) -> None:
     """
-    If this message_data has an 'audio_path' key, try to play it
-    either from a local file or a URL.
+    Checks for an audio file path in a message data dictionary and displays it.
+
+    This function is designed to work within a Streamlit application. It looks for
+    the 'audio_path' key in the provided dictionary. If found, it determines whether
+    the path is a remote URL or a local file. It then attempts to render an
+    interactive audio player using `st.audio`.
+
+    Args:
+        message_data (Dict[str, Any]): A dictionary containing message details.
+            This function specifically looks for the key 'audio_path'. The value
+            should be a string that is either a URL (starting with 'http://' or
+            'https://') or a local path to an audio file.
+
+    Returns:
+        None: This function does not return any value. Its purpose is to display
+              content as a side effect in a Streamlit app.
+
+    Side Effects:
+        - If a valid audio path is found, it calls `st.audio()` to render an
+          audio player in the Streamlit interface.
+        - If a local file path is given but the file is not found or cannot be
+          read, it calls `st.warning()` to display a warning message.
     """
+    # Check if the 'audio_path' key exists and has a non-empty value
     if "audio_path" in message_data and message_data["audio_path"]:
         path = message_data["audio_path"]
+
+        # Differentiate between a web URL and a local file path
         if not (path.startswith("http://") or path.startswith("https://")):
-            # Local file
+            # This is a local file path.
+            # First, verify that the file actually exists.
             if os.path.exists(path):
                 try:
-                    with open(path, "rb") as f:
-                        st.audio(f.read(), format="audio/mpeg")
+                    # Open the file in binary read mode ('rb') which is required for media.
+                    with open(path, "rb") as audio_file:
+                        audio_bytes = audio_file.read()
+                        # Display the audio player in Streamlit.
+                        # The format must be specified for byte inputs.
+                        st.audio(audio_bytes, format="audio/mpeg")
                 except Exception as e:
+                    # If reading the file fails, show a warning.
                     st.warning(f"Could not play audio file: {path}. Error: {e}")
             else:
+                # If the file path does not exist, show a warning.
                 st.warning(f"Audio file not found: {path}")
         else:
-            # Remote URL
+            # This is a remote URL. Streamlit's st.audio can handle URLs directly.
             st.audio(path)
 
 # ─── 5) MAIN PAGE LAYOUT ────────────────────────────────────────────────────────
@@ -500,105 +528,124 @@ else:
     else:
         st.info("No messages in the current session yet.")
 
-import streamlit as st
-import io
-import time
-import wave
-import audioop
 
-from google.cloud import speech
+# ─── 7) INPUT SECTION  ──────────────────────────────────────────────────
 
-# ─── 7) INPUT SECTION ──────────────────────────────────────────────────────────
+# Initialise a state variable to track the last audio we've processed.
+# This is the key to preventing the loop.
+if "last_processed_audio" not in st.session_state:
+    st.session_state.last_processed_audio = None
 
-# 1) Typing input
-user_input = st.chat_input("Type your message…")
-if user_input:
-    if send_message(user_input):
-        # Only rerun if send_message returned True (i.e. the message was sent)
-        st.rerun()
+# This variable will hold the user's question for this specific script run.
+# It gets reset to "" every time the script reruns.
+user_question = ""
+
+# Create columns for text input and voice button.
+col1, col2 = st.columns([0.9, 0.1])
 
 
-# 2) Separator
-st.markdown("---")
-st.subheader("Voice Input")
+with col1:
+    # Get text input from the user.
+    text_input = st.chat_input("Type your message...", key="chat_input_main")
+    if text_input:
+        user_question = text_input
 
-recorded_bytes = None
-
-# 3) Try to show an audio recorder widget
-try:
-    # audio_recorder provides its own Start/Stop button and shows elapsed time.
-    recorded_bytes = audio_recorder(
-        text="",                   # Hide its default labels
-        recording_color="#53f707eb",
-        neutral_color="#4217ddfd",
-        icon_name="microphone",
-        icon_size="0.5x",
-        key="audio_recorder",
-    )
-except ImportError:
-    st.info(
-        "To use voice input, please install the audio recorder component:\n\n"
-        "```bash\n"
-        "pip install streamlit-audiorecorder\n"
-        "```"
-    )
+with col2:
+    # Add vertical space to align the microphone icon better.
+    st.write("") 
+    
+    # Get voice input from the user.
     recorded_bytes = None
-except Exception as e:
-    st.error(f"Error initialising the audio recorder: {e}")
-    recorded_bytes = None
+    try:
+        recorded_bytes = audio_recorder(
+            text="",
+            pause_threshold=10,
+            recording_color="#f70727eb",
+            neutral_color="#0d0752f9",
+            icon_name="microphone",
+            icon_size="1x",
+            key="audio_recorder",
+        )
+    except ImportError:
+        with col1: 
+            st.error("To use voice input, please install `streamlit-audiorecorder`.")
+        recorded_bytes = None
+    except Exception as e:
+        with col1:
+            st.error(f"Error with audio recorder: {e}")
+        recorded_bytes = None
 
+# Check if we have a NEW recording that we haven't processed yet.
+if recorded_bytes and recorded_bytes != st.session_state.last_processed_audio:
+    # Mark this new audio as "processed" to prevent reprocessing on the next rerun.
+    st.session_state.last_processed_audio = recorded_bytes
 
-# 4) Once recording stops, `audio_recorder` returns bytes
-if recorded_bytes:
-    # Transcribe inside a spinner
-    with st.spinner("Transcribing your spoken question…"):
+    # Transcribe the audio bytes to text.
+    with st.spinner("Transcribing..."):
+        wf = None
         try:
-            # ----- Convert stereo to mono (if needed) -----
+            # Prepare audio bytes for transcription.
             in_buffer = io.BytesIO(recorded_bytes)
             wf = wave.open(in_buffer, "rb")
+            mono_bytes = recorded_bytes
 
-            if wf.getnchannels() == 1:
-                # Already mono → just rewind and grab the raw bytes
-                wf.rewind()
-                mono_bytes = in_buffer.getvalue()
-            else:
-                # Convert to mono
+            # Convert to mono if the audio is stereo.
+            if wf.getnchannels() > 1:
                 frames = wf.readframes(wf.getnframes())
-                mono_frames = audioop.tomono(
-                    frames,
-                    wf.getsampwidth(),  # sample width in bytes
-                    1,                  # left channel weight
-                    1                   # right channel weight
-                )
+                mono_frames = audioop.tomono(frames, wf.getsampwidth(), 1, 1)
                 out_buffer = io.BytesIO()
-                monowf = wave.open(out_buffer, "wb")
-                monowf.setnchannels(1)
-                monowf.setsampwidth(wf.getsampwidth())
-                monowf.setframerate(wf.getframerate())
-                monowf.writeframes(mono_frames)
-                monowf.close()
+                with wave.open(out_buffer, "wb") as monowf:
+                    monowf.setnchannels(1)
+                    monowf.setsampwidth(wf.getsampwidth())
+                    monowf.setframerate(wf.getframerate())
+                    monowf.writeframes(mono_frames)
                 mono_bytes = out_buffer.getvalue()
 
-            # ----- Call Google Cloud Speech-to-Text -----
+            # Call Google Cloud Speech-to-Text API.
             speech_client = speech.SpeechClient()
             audio = speech.RecognitionAudio(content=mono_bytes)
             config = speech.RecognitionConfig(
                 encoding=speech.RecognitionConfig.AudioEncoding.LINEAR16,
-                sample_rate_hertz=48000,
+                sample_rate_hertz=wf.getframerate(), # Use actual framerate
                 language_code="en-US",
             )
+            
+            # response = speech_client.long_running_recognize(config=config, audio=audio)
+            operation = speech_client.long_running_recognize(config=config, audio=audio)
 
-            response = speech_client.recognize(config=config, audio=audio)
+            print("Waiting for operation to complete...")
+            response = operation.result(timeout=60)
+    
             transcript = "\n".join(
-                res.alternatives[0].transcript for res in response.results
+                res.alternatives[0].transcript for res in response.results if res.alternatives
             )
 
             if transcript:
-                st.write(f"**Transcribed:** {transcript}")
-                if send_message(transcript):
-                    st.rerun()
+                user_question = transcript # Set the question for this run
             else:
-                st.warning("No speech detected. Please try recording again.")
+                st.toast("⚠️ No speech detected. Please try again.")
+
         except Exception as e:
-            st.session_state.is_recording = False
             st.error(f"Error during transcription: {e}")
+        finally:
+            if wf:
+                wf.close()
+                
+# --- Process the user's question (from either text or voice) ---
+if user_question:
+    # 1. Add user message to session state.
+    st.session_state.messages.append(
+        {"role": "user", "content": user_question, "author": "user", "type": "text"}
+    )
+    
+    # 2. Display the user's message immediately in the chat.
+    with st.chat_message("user"):
+        st.markdown(user_question)
+
+    # 3. Display a spinner while the agent searches and call the backend.
+    with st.spinner("The agents are searching..."):
+        send_message(user_question)
+
+    # 4. Rerun the app to display the assistant's response from the updated state.
+    st.rerun()
+    

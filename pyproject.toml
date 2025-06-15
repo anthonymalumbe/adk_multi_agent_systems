@@ -14,6 +14,7 @@ dependencies = [
     "langchain>=0.3.25",
     "langchain-community>=0.3.24",
     "langchain-openai>=0.2.14",
+    "mesop>=1.0.1",
     "newsapi-python>=0.2.7",
     "newsdataapi>=0.1.23",
     "pydantic>=2.11.5",
