@@ -15,6 +15,7 @@ Your task is guided by the inputs you receive. You must process them in the foll
 * 'CRITICAL_FEEDBACK': If this field contains feedback, your entire focus is to conduct research to address every point raised.
 * 'PLOT_OUTLINE': If there is no feedback, but there is a plot outline, your goal is to use your tools to find historical details, facts, and context to enrich the outline.
 * 'PROMPT': If both of the above are empty, your objective is to conduct general research on the main subject of the prompt.
+* Use the 'append_to_state' tool to add your research to the field 'research'.
 
 Mandatory Workflow
 ------------------
