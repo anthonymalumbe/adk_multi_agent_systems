@@ -52,7 +52,7 @@ research_agent = Agent(
     name="researcher",
     model='gemini-1.5-flash',
     description="Answer research questions using fetch_top_articles tool.",
-    instruction=instruction=prompt.news_editor_PROMPT,
+    instruction=instruction=prompt.researcher_PROMPT,
     generate_content_config=types.GenerateContentConfig(
     temperature=0,
     ),
