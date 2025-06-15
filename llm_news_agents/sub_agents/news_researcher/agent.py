@@ -52,24 +52,7 @@ research_agent = Agent(
     name="researcher",
     model='gemini-1.5-flash',
     description="Answer research questions using fetch_top_articles tool.",
-    instruction="""
-    PROMPT:
-    {{ PROMPT? }}
-    
-    PLOT_OUTLINE:
-    {{ PLOT_OUTLINE? }}
-
-    CRITICAL_FEEDBACK:
-    {{ CRITICAL_FEEDBACK? }}
-
-    INSTRUCTIONS:
-    - If there is a CRITICAL_FEEDBACK, use your tools to do research to solve those suggestions
-    - If there is a PLOT_OUTLINE, use your tools to do research to add more historical detail
-    - If these are empty, use your tools to gather facts about the person in the PROMPT
-    - Use the 'append_to_state' tool to add your research to the field 'research'.
-    - Summarise what you have learned.
-    Now, use your tools to do research.
-    """,
+    instruction=instruction=prompt.news_editor_PROMPT,
     generate_content_config=types.GenerateContentConfig(
     temperature=0,
     ),
