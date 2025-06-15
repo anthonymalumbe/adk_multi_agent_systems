@@ -26,6 +26,7 @@ The core of this application is the **`llm_news_auditor`**, a top‑level agent 
    * Preserves the author’s tone, style, and structure with minimal edits.
 ---
 Folder Structure
+
 context-ai/
 ├── .venv/                      # Virtual environment directory created by uv
 ├── adk_multi_agent_systems/
