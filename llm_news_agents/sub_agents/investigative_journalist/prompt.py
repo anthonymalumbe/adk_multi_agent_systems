@@ -12,7 +12,6 @@ investigative_journalist_PROMPT = """
     - If there is a CRITICAL_FEEDBACK, use your tools to do research to solve those suggestions
     - If there is a PLOT_OUTLINE, use your tools to do research to add more historical detail
     - If these are empty, use your tools to gather facts about the person in the PROMPT
-    - Use the 'append_to_state' tool to add your research to the field 'research'.
     - Summarise what you have learned.
     Now, use your tools to do research.
     """ 
