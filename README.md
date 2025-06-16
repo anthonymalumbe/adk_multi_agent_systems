@@ -184,7 +184,7 @@ uv venv
 1. **Start the ADK server:**
 
    ```bash
-   adk serve
+   adk api_server
    ```
 2. **Run the Streamlit app in a separate terminal:**
 
