@@ -1,7 +1,9 @@
 # Context AI 
 ## A Multi-Agent System for Fact-Checking and Content Refinement
 
+
 ![Alt text](https://github.com/anthonymalumbe/adk_multi_agent_systems/blob/master/images/a2a_framework.png) 
+
 
 A sophisticated multi-agent framework that critically evaluates, researches, and refines text-based content. Built with the Google Agent Development Kit (ADK) and Streamlit, Context AI combines specialized AI agents to ensure accuracy, depth, and and clarity—supporting both text and voice interactions.
 
