@@ -139,7 +139,7 @@ async def final_processing_callback(
     return llm_response
 
 news_editor_agent = Agent(
-    model='gemini-1.5-flash',
+    model='gemini-2.5-flash-lite',
     name='news_editor_agent',
     instruction=prompt.news_editor_PROMPT,
     # Added Google Search for the final grounding step
