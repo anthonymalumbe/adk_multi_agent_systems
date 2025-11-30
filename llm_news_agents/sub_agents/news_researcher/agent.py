@@ -50,7 +50,7 @@ def append_to_state(
 # Agents
 research_agent = Agent(
     name="researcher",
-    model='gemini-1.5-flash',
+    model='gemini-2.5-flash-lite',
     description="Answer research questions using fetch_top_articles tool.",
     instruction=instruction=prompt.researcher_PROMPT,
     generate_content_config=types.GenerateContentConfig(
