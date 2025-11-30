@@ -213,4 +213,4 @@ uv venv
 
 ## Logging & Monitoring
 
-All agent interactions and tool calls are logged to Google Cloud Logging. Configure sinks and views in the Cloud Console to analyze logs and metrics.
+All agent interactions and tool calls are logged to Google Cloud Logging. Configure sinks and views in the Cloud Console to analyse logs and metrics.
