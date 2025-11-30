@@ -304,7 +304,7 @@ async def fact_checker(
         return None
 
 investigative_journalist_agent = Agent(
-    model='gemini-1.5-flash',
+    model='gemini-2.5-flash-lite',
     name='investigative_journalist',
     before_model_callback=log_query_to_model,
     after_model_callback=_render_reference,
