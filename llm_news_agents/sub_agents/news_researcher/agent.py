@@ -8,10 +8,11 @@ from dotenv import load_dotenv
 from datetime import datetime
 
 from google.adk import Agent
+from google.adk.tools import google_search, agent_tool
 from google.adk.agents import SequentialAgent, LoopAgent, ParallelAgent
 from google.adk.tools.tool_context import ToolContext
-from google.adk.tools.langchain_tool import LangchainTool  # import
-from google.adk.tools.crewai_tool import CrewaiTool
+from google.adk.tools.langchain_tool import LangchainTool  
+#from google.adk.tools.crewai_tool import CrewaiTool
 from google.genai import types
 
 from langchain_community.tools import WikipediaQueryRun
@@ -47,7 +48,16 @@ def append_to_state(
     return {"status": "success"}
 
 
+
 # Agents
+web_search = Agent(
+    name='web_search_agent',
+    model='gemini-2.0-flash',
+    instruction=(
+        'You are a helpful agent that can answer questions using web search.'
+    ),
+    tools=[google_search],
+)
 research_agent = Agent(
     name="researcher",
     model='gemini-2.5-flash-lite',
@@ -58,6 +68,9 @@ research_agent = Agent(
     ),
     tools=[
         LangchainTool(tool=WikipediaQueryRun(api_wrapper=WikipediaAPIWrapper())),
+        agent_tool.AgentTool(web_search),
         append_to_state,
+        
     ],
 )
+
