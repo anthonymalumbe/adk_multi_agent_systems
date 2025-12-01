@@ -8,6 +8,7 @@ import asyncio
 import httpx
 
 from google.adk import Agent
+from google.adk.agents import ParallelAgent
 from google.adk.agents.callback_context import CallbackContext
 from google.adk.models.llm_response import LlmResponse
 from google.genai import types
@@ -194,26 +195,84 @@ async def fetch_top_newsdataio_api(query: str, from_date: Optional[str] = None, 
         print(f"An unexpected error occurred: {e}")
         return []
     
+
+from typing import Optional, List, Dict, Any
+
+# async def search_news(query: str, from_date: Optional[str] = None, to_date: Optional[str] = None) -> List[Dict[str, Any]]:
+#     """
+#     Search for news articles matching a query using NewsAPI's 'everything' endpoint.
+
+#     Args:
+#         query (str): The keyword or phrase to search for.
+#         api_key (str): Your NewsAPI API key.
+#         from_date (Optional[str]): The oldest date for articles (YYYY-MM-DD). Defaults to None.
+#         to_date (Optional[str]): The newest date for articles (YYYY-MM-DD). Defaults to None.
+
+#     Returns:
+#         list: A list of up to 5 article dictionaries, sorted by popularity.
+    
+#     Raises:
+#         ValueError: If the provided date format is incorrect.
+#         requests.exceptions.RequestException: For issues with the web request.
+#         Exception: If the API returns an error status.
+#     """
+#     api_key = os.getenv("NEWSAPI_KEY")
+#     url = "https://newsapi.org/v2/everything"
+#     params = {
+#         "q": query,
+#         "sortBy": "relevancy",
+#         "pageSize": 5,
+#         "page": 1,
+#         "language": "en",
+#         "apiKey": api_key
+#     }
+
+#     # Add 'from' date to parameters if it's provided
+#     if from_date:
+#         try:
+#             # Validate the date format
+#             from_dt = datetime.strptime(from_date, "%Y-%m-%d")
+#             params["from"] = from_dt.strftime("%Y-%m-%d")
+#         except ValueError:
+#             # Raise an error for an invalid format
+#             raise ValueError("from_date must be in YYYY-MM-DD format.")
+
+#     # Add 'to' date to parameters if it's provided
+#     if to_date:
+#         try:
+#             # Validate the date format
+#             to_dt = datetime.strptime(to_date, "%Y-%m-%d")
+#             params["to"] = to_dt.strftime("%Y-%m-%d")
+#         except ValueError:
+#             # Raise an error for an invalid format
+#             raise ValueError("to_date must be in YYYY-MM-DD format.")
+
+#     # Make the API request
+#     response = requests.get(url, params=params)
+#     response.raise_for_status()  # Raise an exception for bad status codes (4xx or 5xx)
+#     data = response.json()
+
+#     filtered = []
+#     for article in data.get("articles", []):
+#         filtered.append({
+#             "source": article.get("source"),          
+#             "title": article.get("title"),
+#             "description": article.get("description"),
+#             "url": article.get("url")
+#         })
+
+#     return filtered
+
+
 async def search_news(query: str, from_date: Optional[str] = None, to_date: Optional[str] = None) -> List[Dict[str, Any]]:
     """
     Search for news articles matching a query using NewsAPI's 'everything' endpoint.
-
-    Args:
-        query (str): The keyword or phrase to search for.
-        api_key (str): Your NewsAPI API key.
-        from_date (Optional[str]): The oldest date for articles (YYYY-MM-DD). Defaults to None.
-        to_date (Optional[str]): The newest date for articles (YYYY-MM-DD). Defaults to None.
-
-    Returns:
-        list: A list of up to 5 article dictionaries, sorted by popularity.
-    
-    Raises:
-        ValueError: If the provided date format is incorrect.
-        requests.exceptions.RequestException: For issues with the web request.
-        Exception: If the API returns an error status.
+    Automatically adjusts 'from_date' to adhere to the Free Plan limit (30 days).
     """
     api_key = os.getenv("NEWSAPI_KEY")
     url = "https://newsapi.org/v2/everything"
+    
+    # Base parameters
     params = {
         "q": query,
         "sortBy": "relevancy",
@@ -223,29 +282,44 @@ async def search_news(query: str, from_date: Optional[str] = None, to_date: Opti
         "apiKey": api_key
     }
 
-    # Add 'from' date to parameters if it's provided
+    # ---------------------------------------------------------
+    # PROPOSED SOLUTION: Calculate the oldest allowable date (29 days ago)
+    # ---------------------------------------------------------
+    oldest_allowed_date = datetime.now() - timedelta(days=29)
+
+    # Handle 'from_date' with the 30-day logic applied
     if from_date:
         try:
-            # Validate the date format
+            # Parse the user's requested date
             from_dt = datetime.strptime(from_date, "%Y-%m-%d")
+            
+            # Check if the user's date is older than the allowed limit
+            if from_dt < oldest_allowed_date:
+                print(f"Notice: '{from_date}' is too old for the Free Plan. Adjusting to '{oldest_allowed_date.strftime('%Y-%m-%d')}'.")
+                from_dt = oldest_allowed_date
+            
             params["from"] = from_dt.strftime("%Y-%m-%d")
         except ValueError:
-            # Raise an error for an invalid format
             raise ValueError("from_date must be in YYYY-MM-DD format.")
 
-    # Add 'to' date to parameters if it's provided
+    # Handle 'to_date'
     if to_date:
         try:
-            # Validate the date format
             to_dt = datetime.strptime(to_date, "%Y-%m-%d")
             params["to"] = to_dt.strftime("%Y-%m-%d")
         except ValueError:
-            # Raise an error for an invalid format
             raise ValueError("to_date must be in YYYY-MM-DD format.")
 
     # Make the API request
+    # Note: requests.get is synchronous. In a strictly async function, 
+    # this blocks the loop. Consider using 'httpx' or 'aiohttp' for true async.
     response = requests.get(url, params=params)
-    response.raise_for_status()  # Raise an exception for bad status codes (4xx or 5xx)
+    
+    # Specific handling for the 426 error if it somehow slips through
+    if response.status_code == 426:
+        raise Exception("NewsAPI Error: 426 Upgrade Required. You are trying to access data too far back for your plan.")
+        
+    response.raise_for_status()
     data = response.json()
 
     filtered = []
@@ -258,6 +332,7 @@ async def search_news(query: str, from_date: Optional[str] = None, to_date: Opti
         })
 
     return filtered
+
 
 async def fact_checker(
     query: str,
@@ -303,6 +378,81 @@ async def fact_checker(
         print(f"Error making API request: {e}")
         return None
 
+
+# investigative_journalist_agent = Agent(
+#     model='gemini-2.0-flash',
+#     name='investigative_journalist',
+#     before_model_callback=log_query_to_model,
+#     after_model_callback=_render_reference,
+#     instruction=prompt.investigative_journalist_PROMPT,
+#     # """
+#     # PROMPT:
+#     # {{ PROMPT? }}
+    
+#     # PLOT_OUTLINE:
+#     # {{ PLOT_OUTLINE? }}
+
+#     # CRITICAL_FEEDBACK:
+#     # {{ CRITICAL_FEEDBACK? }}
+
+#     # INSTRUCTIONS:
+#     # - If there is a CRITICAL_FEEDBACK, use your tools to do research to solve those suggestions
+#     # - If there is a PLOT_OUTLINE, use your tools to do research to add more historical detail
+#     # - If these are empty, use your tools to gather facts about the person in the PROMPT
+#     # - Use the 'append_to_state' tool to add your research to the field 'research'.
+#     # - Summarise what you have learned.
+#     # Now, use your tools to do research.
+#     # """,
+
+#     # Gave the journalist the tools its prompt tells it to use.
+#       tools=[fetch_top_newsdataio_api,search_news, fact_checker,],
+#     #   tools=[fetch_top_newsdataio_api,search_news, fact_checker,],
+
+# )
+
+# --- Sub-Agent 1: The Researcher ---
+# Dedicated to fetching and searching news.
+news_researcher = Agent(
+    name="NewsResearcher",
+    model='gemini-2.0-flash',
+    description="You are responsible for gathering historical details and current news.",
+    instruction="""
+        You are responsible for gathering historical details and current news.
+        Use your tools to find deep historical context or breaking news.
+        Provide comprehensive summaries of the news found.
+        Do not worry about fact-checking; focus on information gathering.
+    """,
+    tools=[fetch_top_newsdataio_api,search_news, fact_checker],
+    output_key="research_options", 
+
+)
+
+# --- Sub-Agent 2: The Verifier ---
+# Dedicated strictly to fact checking claims.
+fact_checker_agent = Agent(
+    name="FactChecker",
+    model='gemini-2.0-flash',
+    instruction="""
+        You are a strict fact checker.
+        Verify specific claims provided to you.
+        Rate the veracity of statements based on your tool's output.
+        Be extremely skeptical and precise.""",
+    description="You are a strict fact checker.",
+    tools=[fact_checker],
+    output_key="factchecker_options", 
+)
+
+from google.adk.agents import ParallelAgent
+
+parallel_info_search = ParallelAgent(
+    name="parallel_info_search",
+    sub_agents=[news_researcher, fact_checker_agent],
+    description="Runs multiple research agents in parallel to gather information."
+    
+)
+
+# --- Main Agent: The Orchestrator (ParallelAgent) ---
+# This agent manages the logic and delegates to the sub-agents.
 investigative_journalist_agent = Agent(
     model='gemini-2.5-flash-lite',
     name='investigative_journalist',
@@ -311,3 +461,29 @@ investigative_journalist_agent = Agent(
     instruction=prompt.investigative_journalist_PROMPT,
     tools=[fetch_top_newsdataio_api,search_news, fact_checker],
 )
+
+    # """
+    # You are an Investigative Journalist Manager. Your goal is to coordinate a story.
+    
+    # CONTEXT RECEIVED:
+    # PROMPT: {{ PROMPT? }}
+    # PLOT_OUTLINE: {{ PLOT_OUTLINE? }}
+    # CRITICAL_FEEDBACK: {{ CRITICAL_FEEDBACK? }}
+
+    # WORKFLOW INSTRUCTIONS:
+    # 1. ANALYZE THE INPUT:
+    #    - If there is CRITICAL_FEEDBACK: Delegate to the 'Fact Checker' and 'News Researcher' to solve suggestions.
+    #    - If there is a PLOT_OUTLINE: Delegate to the 'News Researcher' to add historical detail to the outline.
+    #    - If these are empty: Delegate to 'News Researcher' to gather facts about the person/topic in the PROMPT.
+
+    # 2. EXECUTION:
+    #    - Call your team members in parallel where possible. 
+    #    - Ask the 'News Researcher' to find data.
+    #    - Ask the 'Fact Checker' to verify controversial claims.
+
+    # 3. CONSOLIDATION:
+    #    - Aggregate the findings from your team.
+    #    - Summarise what the team has learned into a cohesive narrative.
+    # """,
+
+#)
