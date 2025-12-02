@@ -94,6 +94,7 @@ venv.bak/
 
 # Jupyter Notebook
 .ipynb_checkpoints
+*/.ipynb_checkpoints/*
 
 #======================================
 # User-added files and directories
