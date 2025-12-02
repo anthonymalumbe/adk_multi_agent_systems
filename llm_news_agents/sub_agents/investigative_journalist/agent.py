@@ -12,7 +12,6 @@ from google.adk.agents import ParallelAgent
 from google.adk.agents.callback_context import CallbackContext
 from google.adk.models.llm_response import LlmResponse
 from google.genai import types
-from callback_logging import log_query_to_model, log_model_response
 from newsdataapi import NewsDataApiClient
 from datetime import datetime, timedelta
 from typing import Dict, Any, Optional, List
@@ -198,72 +197,6 @@ async def fetch_top_newsdataio_api(query: str, from_date: Optional[str] = None, 
 
 from typing import Optional, List, Dict, Any
 
-# async def search_news(query: str, from_date: Optional[str] = None, to_date: Optional[str] = None) -> List[Dict[str, Any]]:
-#     """
-#     Search for news articles matching a query using NewsAPI's 'everything' endpoint.
-
-#     Args:
-#         query (str): The keyword or phrase to search for.
-#         api_key (str): Your NewsAPI API key.
-#         from_date (Optional[str]): The oldest date for articles (YYYY-MM-DD). Defaults to None.
-#         to_date (Optional[str]): The newest date for articles (YYYY-MM-DD). Defaults to None.
-
-#     Returns:
-#         list: A list of up to 5 article dictionaries, sorted by popularity.
-    
-#     Raises:
-#         ValueError: If the provided date format is incorrect.
-#         requests.exceptions.RequestException: For issues with the web request.
-#         Exception: If the API returns an error status.
-#     """
-#     api_key = os.getenv("NEWSAPI_KEY")
-#     url = "https://newsapi.org/v2/everything"
-#     params = {
-#         "q": query,
-#         "sortBy": "relevancy",
-#         "pageSize": 5,
-#         "page": 1,
-#         "language": "en",
-#         "apiKey": api_key
-#     }
-
-#     # Add 'from' date to parameters if it's provided
-#     if from_date:
-#         try:
-#             # Validate the date format
-#             from_dt = datetime.strptime(from_date, "%Y-%m-%d")
-#             params["from"] = from_dt.strftime("%Y-%m-%d")
-#         except ValueError:
-#             # Raise an error for an invalid format
-#             raise ValueError("from_date must be in YYYY-MM-DD format.")
-
-#     # Add 'to' date to parameters if it's provided
-#     if to_date:
-#         try:
-#             # Validate the date format
-#             to_dt = datetime.strptime(to_date, "%Y-%m-%d")
-#             params["to"] = to_dt.strftime("%Y-%m-%d")
-#         except ValueError:
-#             # Raise an error for an invalid format
-#             raise ValueError("to_date must be in YYYY-MM-DD format.")
-
-#     # Make the API request
-#     response = requests.get(url, params=params)
-#     response.raise_for_status()  # Raise an exception for bad status codes (4xx or 5xx)
-#     data = response.json()
-
-#     filtered = []
-#     for article in data.get("articles", []):
-#         filtered.append({
-#             "source": article.get("source"),          
-#             "title": article.get("title"),
-#             "description": article.get("description"),
-#             "url": article.get("url")
-#         })
-
-#     return filtered
-
-
 async def search_news(query: str, from_date: Optional[str] = None, to_date: Optional[str] = None) -> List[Dict[str, Any]]:
     """
     Search for news articles matching a query using NewsAPI's 'everything' endpoint.
@@ -379,39 +312,6 @@ async def fact_checker(
         return None
 
 
-# investigative_journalist_agent = Agent(
-#     model='gemini-2.0-flash',
-#     name='investigative_journalist',
-#     before_model_callback=log_query_to_model,
-#     after_model_callback=_render_reference,
-#     instruction=prompt.investigative_journalist_PROMPT,
-#     # """
-#     # PROMPT:
-#     # {{ PROMPT? }}
-    
-#     # PLOT_OUTLINE:
-#     # {{ PLOT_OUTLINE? }}
-
-#     # CRITICAL_FEEDBACK:
-#     # {{ CRITICAL_FEEDBACK? }}
-
-#     # INSTRUCTIONS:
-#     # - If there is a CRITICAL_FEEDBACK, use your tools to do research to solve those suggestions
-#     # - If there is a PLOT_OUTLINE, use your tools to do research to add more historical detail
-#     # - If these are empty, use your tools to gather facts about the person in the PROMPT
-#     # - Use the 'append_to_state' tool to add your research to the field 'research'.
-#     # - Summarise what you have learned.
-#     # Now, use your tools to do research.
-#     # """,
-
-#     # Gave the journalist the tools its prompt tells it to use.
-#       tools=[fetch_top_newsdataio_api,search_news, fact_checker,],
-#     #   tools=[fetch_top_newsdataio_api,search_news, fact_checker,],
-
-# )
-
-# --- Sub-Agent 1: The Researcher ---
-# Dedicated to fetching and searching news.
 news_researcher = Agent(
     name="NewsResearcher",
     model='gemini-2.0-flash',
@@ -422,12 +322,11 @@ news_researcher = Agent(
         Provide comprehensive summaries of the news found.
         Do not worry about fact-checking; focus on information gathering.
     """,
-    tools=[fetch_top_newsdataio_api,search_news, fact_checker],
+    tools=[fetch_top_newsdataio_api,search_news],
     output_key="research_options", 
 
 )
 
-# --- Sub-Agent 2: The Verifier ---
 # Dedicated strictly to fact checking claims.
 fact_checker_agent = Agent(
     name="FactChecker",
@@ -451,39 +350,12 @@ parallel_info_search = ParallelAgent(
     
 )
 
-# --- Main Agent: The Orchestrator (ParallelAgent) ---
 # This agent manages the logic and delegates to the sub-agents.
 investigative_journalist_agent = Agent(
     model='gemini-2.5-flash-lite',
     name='investigative_journalist',
-    before_model_callback=log_query_to_model,
     after_model_callback=_render_reference,
     instruction=prompt.investigative_journalist_PROMPT,
-    tools=[fetch_top_newsdataio_api,search_news, fact_checker],
+    sub_agents=[parallel_info_search],
 )
 
-    # """
-    # You are an Investigative Journalist Manager. Your goal is to coordinate a story.
-    
-    # CONTEXT RECEIVED:
-    # PROMPT: {{ PROMPT? }}
-    # PLOT_OUTLINE: {{ PLOT_OUTLINE? }}
-    # CRITICAL_FEEDBACK: {{ CRITICAL_FEEDBACK? }}
-
-    # WORKFLOW INSTRUCTIONS:
-    # 1. ANALYZE THE INPUT:
-    #    - If there is CRITICAL_FEEDBACK: Delegate to the 'Fact Checker' and 'News Researcher' to solve suggestions.
-    #    - If there is a PLOT_OUTLINE: Delegate to the 'News Researcher' to add historical detail to the outline.
-    #    - If these are empty: Delegate to 'News Researcher' to gather facts about the person/topic in the PROMPT.
-
-    # 2. EXECUTION:
-    #    - Call your team members in parallel where possible. 
-    #    - Ask the 'News Researcher' to find data.
-    #    - Ask the 'Fact Checker' to verify controversial claims.
-
-    # 3. CONSOLIDATION:
-    #    - Aggregate the findings from your team.
-    #    - Summarise what the team has learned into a cohesive narrative.
-    # """,
-
-#)

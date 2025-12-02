@@ -14,6 +14,7 @@ from google.adk.tools.tool_context import ToolContext
 from google.adk.tools.langchain_tool import LangchainTool  
 #from google.adk.tools.crewai_tool import CrewaiTool
 from google.genai import types
+from . import prompt
 
 from langchain_community.tools import WikipediaQueryRun
 from langchain_community.utilities import WikipediaAPIWrapper
@@ -62,7 +63,7 @@ research_agent = Agent(
     name="researcher",
     model='gemini-2.5-flash-lite',
     description="Answer research questions using fetch_top_articles tool.",
-    instruction=instruction=prompt.researcher_PROMPT,
+    instruction=prompt.researcher_PROMPT,
     generate_content_config=types.GenerateContentConfig(
     temperature=0,
     ),

@@ -9,18 +9,16 @@ from callback_logging import log_query_to_model, log_model_response
 
 sys.path.append("..")
 
-llm_auditor = SequentialAgent(
+llm_news_agent = SequentialAgent(
     name='llm_news_auditor',
-    description=(
-        'Evaluates LLM-generated answers, verifies actual accuracy using the'
-        ' web, and refines the response to ensure alignment with real-world'
-        ' knowledge.'
-    ),
-    # The new sequence is more logical: the journalist investigates and produces
-    # findings, and the editor uses those findings to revise the text.
-    #sub_agents=[investigative_journalist_agent, research_agent, news_editor_agent],
     sub_agents=[investigative_journalist_agent, research_agent, news_editor_agent], 
+    description=(
+        "Orchestrates a sequential auditing pipeline where an investigative "
+        "journalist first targets potential inaccuracies, a researcher verifies "
+        "facts against live web data, and an editor synthesizes the findings "
+        "into a polished, truthful final report."
+    ),
+
 )
 
-root_agent = llm_auditor
-
+root_agent = llm_news_agent

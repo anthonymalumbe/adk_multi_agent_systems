@@ -643,7 +643,10 @@ if user_question:
         st.markdown(user_question)
 
     # 3. Display a spinner while the agent searches and call the backend.
-    with st.spinner("The agents are searching..."):
+    # with st.spinner("The agents are searching..."):
+    #     send_message(user_question)
+
+    with st.spinner("......."):
         send_message(user_question)
 
     # 4. Rerun the app to display the assistant's response from the updated state.
