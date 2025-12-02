@@ -7,7 +7,7 @@ from typing import Optional, List, Dict
 from google.adk import Agent
 from google.adk.agents.callback_context import CallbackContext
 from google.adk.models.llm_response import LlmResponse
-from google.adk.tools import google_search
+from google.adk.tools.google_search_tool import google_search
 from google.genai import types
 from . import prompt
 

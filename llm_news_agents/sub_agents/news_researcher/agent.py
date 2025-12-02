@@ -8,8 +8,8 @@ from dotenv import load_dotenv
 from datetime import datetime
 
 from google.adk import Agent
-from google.adk.tools import google_search, agent_tool
-from google.adk.agents import SequentialAgent, LoopAgent, ParallelAgent
+from google.adk.tools.google_search_tool import google_search
+from google.adk.tools import agent_tool 
 from google.adk.tools.tool_context import ToolContext
 from google.adk.tools.langchain_tool import LangchainTool  
 #from google.adk.tools.crewai_tool import CrewaiTool

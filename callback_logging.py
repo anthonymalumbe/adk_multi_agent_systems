@@ -1,7 +1,8 @@
 import logging
 import google.cloud.logging
 from google.adk.agents.callback_context import CallbackContext
-from google.adk.models import LlmResponse, LlmRequest
+from google.adk.models.llm_response import LlmResponse
+from google.adk.models.llm_request import LlmRequest
 
 def log_query_to_model(callback_context: CallbackContext, llm_request: LlmRequest):
     """Initialises a Google Cloud Logging client and logs the last user query.
