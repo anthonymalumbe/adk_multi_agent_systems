@@ -7,7 +7,7 @@ requires-python = ">=3.13"
 dependencies = [
     "audio-recorder-streamlit>=0.0.10",
     "fastapi>=0.115.12",
-    "google-adk[extensions]>=1.15.0,<2.0.0",
+    "google-adk[extensions]==1.0.0",
     "google-cloud-logging>=3.12.1",
     "google-generativeai>=0.8.5",
     "httpx>=0.28.1",

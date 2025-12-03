@@ -1,6 +1,12 @@
 """LLM Auditor for verifying & refining LLM-generated answers using the web."""
+import vertexai
+import os
+
+vertexai.init(
+    project=os.environ["GOOGLE_CLOUD_PROJECT"],
+    location=os.environ["GOOGLE_CLOUD_LOCATION"],
+)
 import sys
-import callback_logging
 from google.adk.agents import SequentialAgent
 from .sub_agents.investigative_journalist import investigative_journalist_agent
 from .sub_agents.news_researcher import research_agent
@@ -23,7 +29,3 @@ llm_news_agent = SequentialAgent(
 )
 
 root_agent = llm_news_agent
-
-from google.adk.apps.app import App
-
-app = App(root_agent=root_agent, name="llm_news_agents")
